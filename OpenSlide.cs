@@ -14,7 +14,7 @@ namespace OpenSlideCs
 {
     public unsafe sealed class OpenSlide
     {
-        private class Openslide : IDisposable
+        public class Openslide : IDisposable
         {
             internal const int TILE_SIZE = 512;
             /// <summary>
@@ -261,7 +261,7 @@ namespace OpenSlideCs
                 return readable.ToString("0.### ") + suffix;
             }
 
-            private Bitmap ReadRegion(SizeL location, int level, SizeL size)
+            public Bitmap ReadRegion(SizeL location, int level, SizeL size)
             {
                 Stopwatch sw = new Stopwatch();
                 sw.Start();
@@ -368,7 +368,7 @@ namespace OpenSlideCs
             #endregion
         }
 
-        struct SizeL
+        public struct SizeL
         {
             public long Width;
             public long Height;
