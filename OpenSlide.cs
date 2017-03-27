@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -266,14 +267,26 @@ namespace OpenSlideCs
                 Stopwatch sw = new Stopwatch();
                 sw.Start();
                 OpenSlide.TraceMsg( "start ReadRegion " + level + "/" + location.Height + "_" + location.Width+": "+ GetBytesReadable(size.Width*size.Height*3));
-                Bitmap bmp = new Bitmap((int)size.Width, (int)size.Height);
+
+//	            int sizeWidth = (int)size.Width;
+//	            int sizeHeight = (int)size.Height;
+
+	            int sizeWidth = 200;
+	            int sizeHeight = 200;
+	            int locationWidth = 100;
+	            int locationHeight = 100;
+				// todo something is not right
+				// todo only works till a certain size because of possible array width in c#, have to assert size before	
+
+	            Bitmap bmp = new Bitmap(sizeWidth, sizeHeight);
+
                 bmp.SetPixel(0, 0, Color.AliceBlue);
                 var bmpdata = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height), System.Drawing.Imaging.ImageLockMode.ReadWrite, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
                 OpenSlide.TraceMsg("bmp locked " + level + "/" + location.Height + "_" + location.Width);
                 unsafe
                 {
                     void* p = bmpdata.Scan0.ToPointer();
-                    openslide_read_region(handle, p, location.Width, location.Height, level, size.Width, size.Height);
+                    openslide_read_region(handle, p, locationWidth, locationHeight, level, sizeWidth, sizeHeight);
                 }
                 OpenSlide.TraceMsg("read finished " + level + "/" + location.Height + "_" + location.Width + ": " + GetBytesReadable(size.Width * size.Height * 3 / Math.Max(sw.ElapsedMilliseconds, 1)) + "/ms");
                 bmp.UnlockBits(bmpdata);
@@ -304,16 +317,20 @@ namespace OpenSlideCs
             {
                 double DEFAULT_MPP = 0.19872813990461;
                 var prop = openslide_get_property_value(handle, OPENSLIDE_PROPERTY_NAME_MPP_X);
-                if (prop.ToInt32() == 0)
+
+				if (prop.ToInt32() == 0)
                     GetLastError();
-                var propstring = Marshal.PtrToStringAnsi(prop);
+
+				var propstring = Marshal.PtrToStringAnsi(prop);
                 double ret = DEFAULT_MPP;
                 Double.TryParse(propstring.Replace(",", "."), out ret);
-                if (ret < 1e-10 || ret > 1000)
+
+				if (ret < 1e-10 || ret > 1000)
                 {
                     ret = DEFAULT_MPP;
                     Double.TryParse(propstring.Replace(".",","), out ret);
                 }
+
                 return ret;
             }
 
