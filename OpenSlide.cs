@@ -266,6 +266,7 @@ namespace OpenSlideCs
             {
                 Stopwatch sw = new Stopwatch();
                 sw.Start();
+
                 OpenSlide.TraceMsg( "start ReadRegion " + level + "/" + location.Height + "_" + location.Width+": "+ GetBytesReadable(size.Width*size.Height*3));
 
 //	            int sizeWidth = (int)size.Width;
@@ -276,22 +277,29 @@ namespace OpenSlideCs
 	            int locationWidth = 100;
 	            int locationHeight = 100;
 				// todo something is not right
-				// todo only works till a certain size because of possible array width in c#, have to assert size before	
+				// todo only works till a certain size because of possible array size in c#, have to assert size before	
 
 	            Bitmap bmp = new Bitmap(sizeWidth, sizeHeight);
 
                 bmp.SetPixel(0, 0, Color.AliceBlue);
+
                 var bmpdata = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height), System.Drawing.Imaging.ImageLockMode.ReadWrite, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
-                OpenSlide.TraceMsg("bmp locked " + level + "/" + location.Height + "_" + location.Width);
-                unsafe
+
+				OpenSlide.TraceMsg("bmp locked " + level + "/" + location.Height + "_" + location.Width);
+
+				unsafe
                 {
                     void* p = bmpdata.Scan0.ToPointer();
                     openslide_read_region(handle, p, locationWidth, locationHeight, level, sizeWidth, sizeHeight);
                 }
-                OpenSlide.TraceMsg("read finished " + level + "/" + location.Height + "_" + location.Width + ": " + GetBytesReadable(size.Width * size.Height * 3 / Math.Max(sw.ElapsedMilliseconds, 1)) + "/ms");
-                bmp.UnlockBits(bmpdata);
-                OpenSlide.TraceMsg( "unlock bits " + level + "/" + location.Height + "_" + location.Width);
-                if (bmp.GetPixel(0, 0) == Color.Black)
+
+				OpenSlide.TraceMsg("read finished " + level + "/" + location.Height + "_" + location.Width + ": " + GetBytesReadable(size.Width * size.Height * 3 / Math.Max(sw.ElapsedMilliseconds, 1)) + "/ms");
+
+				bmp.UnlockBits(bmpdata);
+
+				OpenSlide.TraceMsg( "unlock bits " + level + "/" + location.Height + "_" + location.Width);
+
+				if (bmp.GetPixel(0, 0) == Color.Black)
                 {
                     var error = CheckForLastError();
                     if (error != null)
@@ -316,9 +324,9 @@ namespace OpenSlideCs
             public double GetMPP()
             {
                 double DEFAULT_MPP = 0.19872813990461;
-                var prop = openslide_get_property_value(handle, OPENSLIDE_PROPERTY_NAME_MPP_X);
+                IntPtr prop = openslide_get_property_value(handle, OPENSLIDE_PROPERTY_NAME_MPP_X);
 
-				if (prop.ToInt32() == 0)
+				if (prop == IntPtr.Zero) 
                     GetLastError();
 
 				var propstring = Marshal.PtrToStringAnsi(prop);
