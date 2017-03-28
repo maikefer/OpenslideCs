@@ -67,7 +67,6 @@ namespace OpenSlideCs
 
             public int[] EasyLevels;
 
-
             private string origfile;
 
             private void InitZDimensions()
@@ -266,31 +265,56 @@ namespace OpenSlideCs
             {
                 Stopwatch sw = new Stopwatch();
                 sw.Start();
-
+	           
                 OpenSlide.TraceMsg( "start ReadRegion " + level + "/" + location.Height + "_" + location.Width+": "+ GetBytesReadable(size.Width*size.Height*3));
 
-//	            int sizeWidth = (int)size.Width;
-//	            int sizeHeight = (int)size.Height;
+//	            int threshold = 1000;
+//	            int sizeWidth = (size.Width > threshold) ? threshold : (int)size.Width;
+//	            int sizeHeight = (size.Height > threshold) ? threshold : (int)size.Height; 
+//	            int sizeWidth = ((int) size.Width)/700;
+//	            int sizeHeight = (int) size.Height /700;	
+//	            int sizeWidth = 1000;
+//	            int sizeHeight = 800;
 
-	            int sizeWidth = 200;
-	            int sizeHeight = 200;
-	            int locationWidth = 100;
-	            int locationHeight = 100;
-				// todo something is not right
-				// todo only works till a certain size because of possible array size in c#, have to assert size before	
+	            long sizeWidth = 0;
+	            long sizeHeight = 0;
+	            for (int i = 0; i < dimensions.Count; i++)
+	            {
+		            if ((int) dimensions[i].Width > (location.Width + size.Width)) // location.width plus 100 oder so?
+		            {
+			            sizeHeight = dimensions[i].Height;
+			            sizeWidth = dimensions[i].Width;
+		            }
+	            }
+	            if (sizeWidth == 0)
+	            {
+		            sizeHeight = location.Height;
+		            sizeWidth = location.Width; //todo does this reall< work like that, eg. scroll left corner? (No it's not!)
+	            }
 
-	            Bitmap bmp = new Bitmap(sizeWidth, sizeHeight);
+//	            int sizeWidth = (int) dimensions[2].Width;
+//	            int sizeHeight = (int) dimensions[2].Height;
+
+//	            if (sizeHeight < location.Height)
+//	            {
+//						sizeHeight = (int) location.Height;
+//		            sizeWidth = (int) location.Width;
+//	            }
+				
+
+	            Bitmap bmp = new Bitmap((int)sizeWidth, (int)sizeHeight);
 
                 bmp.SetPixel(0, 0, Color.AliceBlue);
 
-                var bmpdata = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height), System.Drawing.Imaging.ImageLockMode.ReadWrite, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+                BitmapData bmpdata = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height), System.Drawing.Imaging.ImageLockMode.ReadWrite, 
+					System.Drawing.Imaging.PixelFormat.Format32bppArgb);
 
 				OpenSlide.TraceMsg("bmp locked " + level + "/" + location.Height + "_" + location.Width);
 
 				unsafe
                 {
                     void* p = bmpdata.Scan0.ToPointer();
-                    openslide_read_region(handle, p, locationWidth, locationHeight, level, sizeWidth, sizeHeight);
+                    openslide_read_region(handle, p, location.Width, location.Height, level, sizeWidth, sizeHeight);
                 }
 
 				OpenSlide.TraceMsg("read finished " + level + "/" + location.Height + "_" + location.Width + ": " + GetBytesReadable(size.Width * size.Height * 3 / Math.Max(sw.ElapsedMilliseconds, 1)) + "/ms");
@@ -514,7 +538,7 @@ namespace OpenSlideCs
             //url = '/<ID>_files/<int:level>/<int:col>_<int:row>.<format>'
             OpenSlide.TraceMsg( "start getjpg " + path);
             var rx = new Regex("_files/([0-9]*)/([0-9]*)_([0-9]*).jpeg");
-            var m = rx.Match(path);
+            Match m = rx.Match(path);
             if (m.Success)
             {
                 var ost = GetOpenSlide(filename);
