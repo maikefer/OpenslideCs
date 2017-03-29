@@ -31,7 +31,7 @@ namespace OpenSlideCs
             /// <summary>
             /// dimensions per os_level
             /// </summary>
-            List<SizeL> dimensions = new List<SizeL>();
+            public List<SizeL> dimensions = new List<SizeL>();
             /// <summary>
             /// downsample per os_level (how many original pixels are represented by one pixel) usually first level is 1?
             /// </summary>
