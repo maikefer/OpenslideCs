@@ -276,11 +276,11 @@ namespace OpenSlideCs
 //	            int sizeWidth = 1000;
 //	            int sizeHeight = 800;
 
-	            long sizeWidth = 0;
+	        /*    long sizeWidth = 0;
 	            long sizeHeight = 0;
 	            for (int i = 0; i < dimensions.Count; i++)
 	            {
-		            if ((int) dimensions[i].Width > (location.Width + size.Width)) // location.width plus 100 oder so?
+		            if ((int) dimensions[i].Width > location.Width) // location.width plus 100 oder so? (wenn loc.w + size.w dann too much)
 		            {
 			            sizeHeight = dimensions[i].Height;
 			            sizeWidth = dimensions[i].Width;
@@ -290,7 +290,7 @@ namespace OpenSlideCs
 	            {
 		            sizeHeight = location.Height;
 		            sizeWidth = location.Width; //todo does this reall< work like that, eg. scroll left corner? (No it's not!)
-	            }
+	            }*/
 
 //	            int sizeWidth = (int) dimensions[2].Width;
 //	            int sizeHeight = (int) dimensions[2].Height;
@@ -302,7 +302,7 @@ namespace OpenSlideCs
 //	            }
 				
 
-	            Bitmap bmp = new Bitmap((int)sizeWidth, (int)sizeHeight);
+	            Bitmap bmp = new Bitmap((int)size.Width, (int)size.Height);
 
                 bmp.SetPixel(0, 0, Color.AliceBlue);
 
@@ -314,7 +314,7 @@ namespace OpenSlideCs
 				unsafe
                 {
                     void* p = bmpdata.Scan0.ToPointer();
-                    openslide_read_region(handle, p, location.Width, location.Height, level, sizeWidth, sizeHeight);
+                    openslide_read_region(handle, p, location.Width, location.Height, level, size.Width, size.Height);
                 }
 
 				OpenSlide.TraceMsg("read finished " + level + "/" + location.Height + "_" + location.Width + ": " + GetBytesReadable(size.Width * size.Height * 3 / Math.Max(sw.ElapsedMilliseconds, 1)) + "/ms");
