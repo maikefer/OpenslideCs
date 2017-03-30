@@ -1,24 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
+using static System.Double;
 
 namespace OpenSlideCs
 {
-	public unsafe sealed class OpenSlide
+	public unsafe class Openslide : IDisposable
 	{
 		/// <summary>
 		/// microns per pixel
 		/// </summary>
-		public const string OPENSLIDE_PROPERTY_NAME_MPP_X = "openslide.mpp-x";
+		private const string OpenslidePropertyNameMppX = "openslide.mpp-x";
 
 		//const string OPENSLIDE_PROPERTY_NAME_MPP_Y = "openslide.mpp-y";
 
@@ -166,8 +162,7 @@ namespace OpenSlideCs
 
 		public static void TraceMsg(string m)
 		{
-			if (OnTrace != null)
-				OnTrace(m);
+			OnTrace?.Invoke(m);
 		}
 
 /*        public static Tuple<long, long> TestPerf(string testpath)
@@ -190,91 +185,69 @@ namespace OpenSlideCs
 		            return new Tuple<long, long>(TTfirstpage, TTcompletefile);
 		        }
 		    */
-	}
+	//}
 
-	public struct SizeL
-	{
-		public long Width;
-		public long Height;
-
-		public SizeL(long w, long h)
-		{
-			Width = w;
-			Height = h;
-		}
-
-		public override string ToString()
-		{
-			return "w:" + Width + " h:" + Height;
-		}
-	}
-
-	public unsafe class Openslide : IDisposable
-	{
-		internal const int TILE_SIZE = 512;
+	//public unsafe class Openslide : IDisposable
+	//{
+//		internal const int TileSize = 512;
 		/// <summary>
 		/// TILE_SIZE - overlaps (1px on each side)
 		/// </summary>
-		const int TILE_DOWNSAMPLE = TILE_SIZE - 2;
+//		private const int TileDownsample = TileSize - 2;
 		/*
              * For DZ we need the levels to be always twice more zoomed in. The slide file can have levels (os_levels) with ratio 1000 between them. We need to recalculate our levels.
              * based on https://github.com/openslide/openslide-python/blob/master/openslide/deepzoom.py
              */
-		public int* handle;
-		public int max_os_level;
+		private readonly int* _handle;
+
 		/// <summary>
-		/// dimensions per os_level
+		/// dimensions (Width and Height) per os_level (deep zoom level)
 		/// </summary>
-		public List<SizeL> dimensions = new List<SizeL>();
+		public List<Size> Dimensions = new List<Size>();
 		/// <summary>
 		/// downsample per os_level (how many original pixels are represented by one pixel) usually first level is 1?
 		/// </summary>
-		List<double> downsamples = new List<double>();
+//		private readonly List<double> _downsamples = new List<double>();
 		/// <summary>
 		///dimensions per dz_level (in pixels)
 		/// </summary>
-		List<SizeL> z_dimensions = new List<SizeL>();
+		private readonly List<Size> _zDimensions = new List<Size>();
 		/// <summary>
 		///dimensions per dz_level (in tiles)
 		/// </summary>
-		SizeL[] t_dimensions;
+//		private Size[] t_dimensions;
 
 		/// <summary>
 		///Total downsamples for each dz_level (powers of 2) 
 		/// </summary>
-		int[] l0_z_downsamples;
+		private readonly int[] _l0ZDownsamples;
 
 		/// <summary>
 		/// Deep zoom levels
 		/// </summary>
-		int max_dz_level;
-
-		/// <summary>
-		/// Best os_level for dz_level based on downsample(slide_from_dz_level)
-		/// </summary>
-		int[] os_level_for_dz_level;
+		private readonly int _maxDzLevel;
 
 		/// <summary>
 		/// 
 		/// </summary>
-		double[] l_z_downsamples;
+//		private double[] l_z_downsamples;
 
 		public int[] EasyLevels;
 
-		private string origfile;
+//		private string origfile;
 
 		private void InitZDimensions()
 		{
-			///size on a current dz_level
-			var z_size = dimensions[0];
-			z_dimensions.Add(z_size);
-			while (z_size.Width > 1 || z_size.Height > 1)
+			//size on a current dz_level
+			var zSize = Dimensions[0];
+			_zDimensions.Add(zSize);
+			while (zSize.Width > 1 || zSize.Height > 1)
 			{
-				z_size = new SizeL((long)Math.Max(1, Math.Ceiling(z_size.Width / 2.0)),
-					(long)Math.Max(1, Math.Ceiling(z_size.Height / 2.0)));
-				z_dimensions.Add(z_size);
+				zSize = new Size((long)Math.Max(1, Math.Ceiling(zSize.Width / 2.0)),
+					(long)Math.Max(1, Math.Ceiling(zSize.Height / 2.0)));
+				_zDimensions.Add(zSize);
 			}
-			z_dimensions.Reverse();
+			_zDimensions.Reverse();
 		}
 
 		public string GetLastError()
@@ -282,75 +255,69 @@ namespace OpenSlideCs
 			var error = CheckForLastError();
 			if (error != null)
 				throw new ArgumentException("openslide error: " + error);
-			else
-				throw new ArgumentException("openslide error, but error is empty?");
+			throw new ArgumentException("openslide error, but error is empty?");
 		}
 
 		public string CheckForLastError()
 		{
-			var lastError = OpenSlide.openslide_get_error(handle);
+			var lastError = openslide_get_error(_handle);
 			if (lastError.ToInt32() == 0)
 				return null;
-			else
-				return Marshal.PtrToStringAnsi(lastError);
+			return Marshal.PtrToStringAnsi(lastError);
 		}
 
 		public Openslide(string filename)
 		{
-			OpenSlide.TraceMsg( "start openslide " + filename);
-			origfile = filename;
+			TraceMsg( "start openslide " + filename);
+//			origfile = filename;
 			if (!File.Exists(filename))
 				throw new ArgumentException($"File '{filename}' can't be opened");
-			handle = OpenSlide.openslide_open(filename);
-			unsafe
+			_handle = openslide_open(filename);
+			if (_handle == null || _handle[0] == 0)
 			{
-				if (handle == null || handle[0] == 0)
-				{
-					var vendor = OpenSlide.openslide_detect_vendor(filename);
-					//GetLastError();
-					if (vendor.ToInt32() != 0)
-						throw new ArgumentException("Vendor " + Marshal.PtrToStringAnsi(vendor) + " unsupported?");
-					else
-						throw new ArgumentException("File unrecognized");
-				}
+				var vendor = openslide_detect_vendor(filename);
+				//GetLastError();
+				if (vendor.ToInt32() != 0)
+					throw new ArgumentException("Vendor " + Marshal.PtrToStringAnsi(vendor) + " unsupported?");
+				throw new ArgumentException("File unrecognized");
 			}
-			OpenSlide.TraceMsg( "opened openslide " + filename);
-			max_os_level = OpenSlide.openslide_get_level_count(handle);
-			if (max_os_level == -1)
+			TraceMsg( "opened openslide " + filename);
+			var maxOsLevel = openslide_get_level_count(_handle);
+			if (maxOsLevel == -1)
 				GetLastError();
-			for (int level = 0; level < max_os_level; level++)
+			for (int level = 0; level < maxOsLevel; level++)
 			{
-				long w = 0, h = 0;
-				OpenSlide.openslide_get_level_dimensions(handle, level, out w, out h);
+				long w, h;
+				openslide_get_level_dimensions(_handle, level, out w, out h);
 				if (w == -1 || h == -1)
 					GetLastError();
-				dimensions.Add(new SizeL(w, h));
-				var downsample = OpenSlide.openslide_get_level_downsample(handle, level);
+				Dimensions.Add(new Size(w, h));
+				var downsample = openslide_get_level_downsample(_handle, level);
 				if (downsample == -1.0)
 					GetLastError();
-				downsamples.Add(downsample);
+//				_downsamples.Add(downsample);
 			}
 			InitZDimensions();
-			t_dimensions = z_dimensions.Select(x => new SizeL((long)Math.Ceiling(x.Width  / (double)TILE_DOWNSAMPLE),
-				(long)Math.Ceiling(x.Height / (double)TILE_DOWNSAMPLE))).ToArray();
+//			t_dimensions = z_dimensions.Select(x => new Size((long)Math.Ceiling(x.Width  / (double)TILE_DOWNSAMPLE),
+//				(long)Math.Ceiling(x.Height / (double)TILE_DOWNSAMPLE))).ToArray();
 
-			max_dz_level = z_dimensions.Count;
-			l0_z_downsamples = Enumerable.Range(0, max_dz_level).Select(x => (int)Math.Pow(2, max_dz_level - x - 1)).ToArray();
-			os_level_for_dz_level = l0_z_downsamples.Select(x =>
+			_maxDzLevel = _zDimensions.Count;
+			_l0ZDownsamples = Enumerable.Range(0, _maxDzLevel).Select(x => (int)Math.Pow(2, _maxDzLevel - x - 1)).ToArray();
+			_l0ZDownsamples.Select(x =>
 			{
-				var best_level = OpenSlide.openslide_get_best_level_for_downsample(handle, x * 1.01);
-				if (best_level == -1)
+				var bestLevel = openslide_get_best_level_for_downsample(_handle, x * 1.01);
+				if (bestLevel == -1)
 					GetLastError();
-				return best_level;
+				return bestLevel;
 			}).ToArray();
-			l_z_downsamples = Enumerable.Range(0, max_dz_level).Select(l => l0_z_downsamples[l] / downsamples[os_level_for_dz_level[l]]).ToArray();
+//			l_z_downsamples = Enumerable.Range(0, max_dz_level).Select(l => l0_z_downsamples[l] / downsamples[os_level_for_dz_level[l]]).ToArray();
 			InitEasyLevels();
-			OpenSlide.TraceMsg( "end openslide " + filename);
+			TraceMsg( "end openslide " + filename);
 		}
 
-		public MemoryStream GetTile(int level, long row, long col)
+/*		public MemoryStream GetTile(int level, long row, long col)
 		{
-			OpenSlide.TraceMsg( "start gettile " + level+"/"+ col + "_" + row);
+			TraceMsg( "start gettile " + level+"/"+ col + "_" + row);
 			if (level < 0 || level >= max_dz_level)
 				throw new ArgumentException($"wrong level level {level}, row {row}, col {col}");
 			if (t_dimensions[level].Width <= col || t_dimensions[level].Height <= row ||
@@ -358,57 +325,46 @@ namespace OpenSlideCs
 				throw new ArgumentException($"wrong address level {level}, row {row}, col {col}");
 			var os_level = os_level_for_dz_level[level];
 			//Calculate top/ left and bottom/ right overlap
-			var z_overlap_tl = new SizeL(col == 0 ? 0 : 1, 
+			var z_overlap_tl = new Size(col == 0 ? 0 : 1, 
 				row == 0 ? 0 : 1);
-			var z_overlap_br = new SizeL(col == t_dimensions[level].Width ? 0 : 1, 
+			var z_overlap_br = new Size(col == t_dimensions[level].Width ? 0 : 1, 
 				row == t_dimensions[level].Height ? 0 : 1);
 
-			var z_size = new SizeL(Math.Min(TILE_DOWNSAMPLE, z_dimensions[level].Width  - TILE_DOWNSAMPLE * col) + z_overlap_tl.Width  + z_overlap_br.Width,
+			var z_size = new Size(Math.Min(TILE_DOWNSAMPLE, z_dimensions[level].Width  - TILE_DOWNSAMPLE * col) + z_overlap_tl.Width  + z_overlap_br.Width,
 				Math.Min(TILE_DOWNSAMPLE, z_dimensions[level].Height - TILE_DOWNSAMPLE * row) + z_overlap_tl.Height + z_overlap_br.Height);
 			if (z_size.Width < 0 || z_size.Height < 0)
 				throw new ArgumentException($"out of bounds level {level}, row {row}, col {col}");
-			var z_location = new SizeL(TILE_DOWNSAMPLE * col, TILE_DOWNSAMPLE * row);
+			var z_location = new Size(TILE_DOWNSAMPLE * col, TILE_DOWNSAMPLE * row);
 			var l_location = new SizeF((float)l_z_downsamples[level] * (z_location.Width  - z_overlap_tl.Width),
 				(float)l_z_downsamples[level] * (z_location.Height - z_overlap_tl.Height));
 			//Round location down and size up, and add offset of active area
-			var l0_location = new SizeL((long)(downsamples[os_level] * l_location.Width), 
+			var l0_location = new Size((long)(downsamples[os_level] * l_location.Width), 
 				(long)(downsamples[os_level] * l_location.Height));
-			var l_size = new SizeL((long)Math.Min(Math.Ceiling(l_z_downsamples[level] * z_size.Width ), dimensions[os_level].Width),
+			var l_size = new Size((long)Math.Min(Math.Ceiling(l_z_downsamples[level] * z_size.Width ), dimensions[os_level].Width),
 				(long)Math.Min(Math.Ceiling(l_z_downsamples[level] * z_size.Height), dimensions[os_level].Height));
-			OpenSlide.TraceMsg("calcs done " + level + "/" + col + "_" + row);
+			TraceMsg("calcs done " + level + "/" + col + "_" + row);
 			var bmp = ReadRegion(l0_location, os_level, l_size);
 			if (l_size.Width != z_size.Width || l_size.Height != z_size.Height)
 			{ //only resize when necessary
-				OpenSlide.TraceMsg("resize " + level + "/" + col + "_" + row);
+				TraceMsg("resize " + level + "/" + col + "_" + row);
 				bmp = new Bitmap(bmp, (int)z_size.Width, (int)z_size.Height);
 			}
-			OpenSlide.TraceMsg( "new bmp " + level + "/" + col + "_" + row);
+			TraceMsg( "new bmp " + level + "/" + col + "_" + row);
 			var stream = new MemoryStream();
 			//Prints tile coords for testing
 			//var g = Graphics.FromImage(resizedbmp);
 			//g.DrawString(level + "/" + col + "_" + row, new Font(FontFamily.GenericSansSerif, 18), new SolidBrush(Color.Black), resizedbmp.Width / 2, resizedbmp.Height / 2);
 			bmp.Save(stream, System.Drawing.Imaging.ImageFormat.Jpeg);
-			OpenSlide.TraceMsg( "end gettile " + level + "/" + col + "_" + row);
+			TraceMsg( "end gettile " + level + "/" + col + "_" + row);
 			stream.Position = 0;
 			return stream;
-		}
+		}*/
 
-		public long Height
-		{
-			get
-			{
-				return dimensions[0].Height;
-			}
-		}
+		public long Height => Dimensions[0].Height;
 
-		public long Width
-		{
-			get
-			{
-				return dimensions[0].Width;
-			}
-		}
-		private static string GetBytesReadable(long i)
+		public long Width => Dimensions[0].Width;
+
+/*		private static string GetBytesReadable(long i)
 		{
 			// Get absolute value
 			long absolute_i = (i < 0 ? -i : i);
@@ -453,7 +409,7 @@ namespace OpenSlideCs
 			readable = (readable / 1024);
 			// Return formatted number with suffix
 			return readable.ToString("0.### ") + suffix;
-		}
+		}*/
 
 		/// <summary>
 		/// Returns the Bitmap that shows Exceprt with the defined parameters. Whereas Location defines the x and y coordinates of the 
@@ -463,20 +419,17 @@ namespace OpenSlideCs
 		/// <param name="level">The deepzoom Level where 0 is the biggest (detailed), max_os_level the tiniest </param>
 		/// <param name="size"> The Size of the region (scaled according to the level) </param>
 		/// <returns> A Bitmap showing the described Region of the SVS file </returns>
-		public Bitmap ReadRegion(SizeL location, int level, SizeL size)
+		public Bitmap ReadRegion(Size location, int level, Size size)
 		{
 			Bitmap bmp = new Bitmap((int)size.Width, (int)size.Height);
 
 			bmp.SetPixel(0, 0, Color.AliceBlue);
 
-			BitmapData bmpdata = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height), System.Drawing.Imaging.ImageLockMode.ReadWrite, 
-				System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+			BitmapData bmpdata = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height), ImageLockMode.ReadWrite, 
+				PixelFormat.Format32bppArgb);
 
-			unsafe
-			{
-				void* p = bmpdata.Scan0.ToPointer();
-				OpenSlide.openslide_read_region(handle, p, location.Width, location.Height, level, (int)size.Width, (int)size.Height);
-			}
+			void* p = bmpdata.Scan0.ToPointer();
+			openslide_read_region(_handle, p, location.Width, location.Height, level, (int)size.Width, (int)size.Height);
 
 			bmp.UnlockBits(bmpdata);
 
@@ -490,7 +443,7 @@ namespace OpenSlideCs
 			return bmp;
 		}
 
-		public MemoryStream ReadThumbnail(int minsize)
+/*		public MemoryStream ReadThumbnail(int minsize)
 		{
 			for (int i = 0; i < z_dimensions.Count; i++)
 			{
@@ -499,28 +452,26 @@ namespace OpenSlideCs
 					return GetTile(i, 0, 0);
 			}
 			return null;
-		}
+		}*/
 
 		/// <summary>
 		/// Calculates the Microns (Mikrometer) per Pixel 
 		/// </summary>
 		/// <returns> The calculated Microns (Mikrometer) per Pixel </returns>
-		public double GetMPP()
+		public double GetMpp()
 		{
-			double DEFAULT_MPP = 0.19872813990461;
-			IntPtr prop = OpenSlide.openslide_get_property_value(handle, OpenSlide.OPENSLIDE_PROPERTY_NAME_MPP_X);
+			IntPtr prop = openslide_get_property_value(_handle, OpenslidePropertyNameMppX);
 
 			if (prop == IntPtr.Zero) 
 				GetLastError();
 
 			var propstring = Marshal.PtrToStringAnsi(prop);
-			double ret = DEFAULT_MPP;
-			Double.TryParse(propstring.Replace(",", "."), out ret);
+			double ret;
+			TryParse(propstring?.Replace(",", "."), out ret);
 
 			if (ret < 1e-10 || ret > 1000)
 			{
-				ret = DEFAULT_MPP;
-				Double.TryParse(propstring.Replace(".",","), out ret);
+				TryParse(propstring?.Replace(".",","), out ret);
 			}
 
 			return ret;
@@ -533,33 +484,30 @@ namespace OpenSlideCs
 		internal void InitEasyLevels()
 		{
 			var ret = new List<int>();
-			for (int i = 0; i < max_dz_level; i++)
+			for (int i = 0; i < _maxDzLevel; i++)
 			{
-				if (Math.Abs(l0_z_downsamples[i] - 1) < 0.01)
+				if (Math.Abs(_l0ZDownsamples[i] - 1) < 0.01)
 					ret.Add(i);
 			}
 			EasyLevels = ret.ToArray();
 		}
 
 		#region IDisposable Support
-		private bool disposedValue = false; // To detect redundant calls
+		private bool _disposedValue; // To detect redundant calls
 
 		protected virtual void Dispose(bool disposing)
 		{
-			if (!disposedValue)
+			if (!_disposedValue)
 			{
 				if (disposing)
 				{
 				}
-				unsafe
+				if (_handle != null && _handle[0] != 0)
 				{
-					if (handle != null && handle[0] != 0)
-					{
-						OpenSlide.openslide_close(handle);
-					}
+					openslide_close(_handle);
 				}
 
-				disposedValue = true;
+				_disposedValue = true;
 			}
 		}
 
@@ -575,5 +523,25 @@ namespace OpenSlideCs
 		}
 
 		#endregion
+	}
+
+	/// <summary>
+	/// Data Wrapper Class for a value pair of Width / Height (x/y) 
+	/// </summary>
+	public struct Size
+	{
+		public long Width;
+		public long Height;
+
+		public Size(long w, long h)
+		{
+			Width = w;
+			Height = h;
+		}
+
+		public override string ToString()
+		{
+			return "w:" + Width + " h:" + Height;
+		}
 	}
 }
