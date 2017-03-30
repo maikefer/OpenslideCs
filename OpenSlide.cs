@@ -16,8 +16,6 @@ namespace OpenSlideCs
 		/// </summary>
 		private const string OpenslidePropertyNameMppX = "openslide.mpp-x";
 
-		//const string OPENSLIDE_PROPERTY_NAME_MPP_Y = "openslide.mpp-y";
-
 		[DllImport("libopenslide-0.dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
 		public static extern int* openslide_open([MarshalAs(UnmanagedType.LPStr)] string filename);
 
@@ -26,9 +24,6 @@ namespace OpenSlideCs
 
 		[DllImport("libopenslide-0.dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
 		public static extern int openslide_get_level_count(int* osr);
-
-//		[DllImport("libopenslide-0.dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
-//	    public static extern void openslide_get_level0_dimensions(int* osr, out long w, out long h);
 
 		[DllImport("libopenslide-0.dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
 		public static extern void openslide_get_level_dimensions(int* osr, int level, out long w, out long h);
@@ -55,109 +50,6 @@ namespace OpenSlideCs
 		[DllImport("libopenslide-0.dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
 		public static extern IntPtr openslide_get_property_value(int* osr, [MarshalAs(UnmanagedType.LPStr)] string name);
 
-		//public static Dictionary<string, Openslide> slides = new Dictionary<string, Openslide>();
-
-		//public static object slides_lock = new Object();
-
-/*        public Openslide GetOpenSlide(string filename, bool canOpenFile = true)
-		        {
-		            if (!slides.ContainsKey(filename))
-		            {
-		                lock (slides_lock)
-		                {
-		                    if (!slides.ContainsKey(filename))
-		                    {
-		                        if (!canOpenFile)
-		                            return null;
-		                        slides.Add(filename, new Openslide(filename));
-		                        //If we want to clean up the cache
-		                        //Task.Run(async delegate
-		                        //{
-		                        //    await Task.Delay(1000 * 60 * 60 * 6);
-		                        //    lock (slides_lock)
-		                        //    {
-		                        //        if (slides.ContainsKey(filename))
-		                        //        {
-		                        //            slides[filename].Dispose();
-		                        //            slides.Remove(filename);
-		                        //        }
-		                        //    }
-		                        //    return 42; //gotta return something
-		                        //});
-		                    }
-		                }
-		            }
-		            return slides[filename];
-		        }*/
-
-/*        public MemoryStream GetDZI(string filename, out long width, out long height)
-		        {
-		            var ost = GetOpenSlide(filename);
-		            width = ost.Width;
-		            height = ost.Height;
-		            return GetDZI(width, height);
-		        }
-				*/
-
-//      public static string dzitemplate = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Image xmlns=\"http://schemas.microsoft.com/deepzoom/2008\"  Format=\"jpeg\"  Overlap=\"1\"  TileSize=\"@TileSize\">" +
-//                 "<Size Height=\"@Height\" Width=\"@Width\"/></Image>";
-
-/*        public static MemoryStream GetDZI(long width, long height)
-		        {
-		            var s = dzitemplate.Replace("@Width", width.ToString()).Replace("@Height", height.ToString()).Replace("@TileSize", (Openslide.TILE_SIZE - 2).ToString());
-		            MemoryStream stream = new MemoryStream();
-		            StreamWriter writer = new StreamWriter(stream);
-		            writer.Write(s);
-		            writer.Flush();
-		            stream.Position = 0;
-		            return stream;
-		        }
-		*/
-/*       public MemoryStream GetJpg(string filename, string path)
-		        {
-		            //url = '/<ID>_files/<int:level>/<int:col>_<int:row>.<format>'
-		            OpenSlide.TraceMsg( "start getjpg " + path);
-		            var rx = new Regex("_files/([0-9]*)/([0-9]*)_([0-9]*).jpeg");
-		            Match m = rx.Match(path);
-		            if (m.Success)
-		            {
-		                var ost = GetOpenSlide(filename);
-		                OpenSlide.TraceMsg( "open os " + path);
-		                var level = Int32.Parse(m.Groups[1].Value);
-		                var col = Int64.Parse(m.Groups[2].Value);
-		                var row = Int64.Parse(m.Groups[3].Value);
-		                var ret = ost.GetTile(level, row, col);
-		                OpenSlide.TraceMsg( "end getjpg " + path);
-		                return ret;
-		            }
-		            return null;
-		        }
-				*/
-/*        public void EnsureOpen(string filename)
-		        {
-		            GetOpenSlide(filename);
-		        }*/
-
-/*        public bool IsEasyLevel(string filename, int level)
-		        {
-		            var ost = GetOpenSlide(filename, false);
-		            if (ost == null)
-		                return true; //this can happen before the background thread opens all images. Default to showing all levels
-		            return ost.EasyLevels.Contains(level);
-		        }*/
-
-/*        public MemoryStream GetThumbnail(string filemame, int minsize)
-		        {
-		            var ost = GetOpenSlide(filemame);
-		            return ost.ReadThumbnail(minsize);
-		        }*/
-
-/*        public double GetMPP(string filemame)
-		        {
-		            var ost = GetOpenSlide(filemame);
-		            return ost.GetMPP();
-		        }*/
-
 		public static Action<string> OnTrace = Console.WriteLine;
 
 		public static void TraceMsg(string m)
@@ -165,58 +57,18 @@ namespace OpenSlideCs
 			OnTrace?.Invoke(m);
 		}
 
-/*        public static Tuple<long, long> TestPerf(string testpath)
-		        {
-		            var ret = new Tuple<long, long>(0,0);
-		            var buffer = new byte[4096];
-		            var sw = new Stopwatch();
-		            sw.Start();
-		            using (var f = File.OpenRead(testpath))
-		            {
-		                f.Read(buffer, 0, 4096);
-		            }
-		            var TTfirstpage = sw.ElapsedMilliseconds;
-		            var copyto = Path.GetTempFileName();
-		            File.Delete(copyto);
-		            sw.Restart();
-		            File.Copy(testpath, copyto);
-		            var TTcompletefile = sw.ElapsedMilliseconds;
-		            File.Delete(copyto);
-		            return new Tuple<long, long>(TTfirstpage, TTcompletefile);
-		        }
-		    */
-	//}
-
-	//public unsafe class Openslide : IDisposable
-	//{
-//		internal const int TileSize = 512;
-		/// <summary>
-		/// TILE_SIZE - overlaps (1px on each side)
-		/// </summary>
-//		private const int TileDownsample = TileSize - 2;
-		/*
-             * For DZ we need the levels to be always twice more zoomed in. The slide file can have levels (os_levels) with ratio 1000 between them. We need to recalculate our levels.
-             * based on https://github.com/openslide/openslide-python/blob/master/openslide/deepzoom.py
-             */
 		private readonly int* _handle;
 
 		/// <summary>
 		/// dimensions (Width and Height) per os_level (deep zoom level)
 		/// </summary>
 		public List<Size> Dimensions = new List<Size>();
-		/// <summary>
-		/// downsample per os_level (how many original pixels are represented by one pixel) usually first level is 1?
-		/// </summary>
-//		private readonly List<double> _downsamples = new List<double>();
+	
 		/// <summary>
 		///dimensions per dz_level (in pixels)
 		/// </summary>
 		private readonly List<Size> _zDimensions = new List<Size>();
-		/// <summary>
-		///dimensions per dz_level (in tiles)
-		/// </summary>
-//		private Size[] t_dimensions;
-
+	
 		/// <summary>
 		///Total downsamples for each dz_level (powers of 2) 
 		/// </summary>
@@ -227,14 +79,8 @@ namespace OpenSlideCs
 		/// </summary>
 		private readonly int _maxDzLevel;
 
-		/// <summary>
-		/// 
-		/// </summary>
-//		private double[] l_z_downsamples;
-
 		public int[] EasyLevels;
 
-//		private string origfile;
 
 		private void InitZDimensions()
 		{
@@ -315,101 +161,9 @@ namespace OpenSlideCs
 			TraceMsg( "end openslide " + filename);
 		}
 
-/*		public MemoryStream GetTile(int level, long row, long col)
-		{
-			TraceMsg( "start gettile " + level+"/"+ col + "_" + row);
-			if (level < 0 || level >= max_dz_level)
-				throw new ArgumentException($"wrong level level {level}, row {row}, col {col}");
-			if (t_dimensions[level].Width <= col || t_dimensions[level].Height <= row ||
-			    0 > col || 0 > row)
-				throw new ArgumentException($"wrong address level {level}, row {row}, col {col}");
-			var os_level = os_level_for_dz_level[level];
-			//Calculate top/ left and bottom/ right overlap
-			var z_overlap_tl = new Size(col == 0 ? 0 : 1, 
-				row == 0 ? 0 : 1);
-			var z_overlap_br = new Size(col == t_dimensions[level].Width ? 0 : 1, 
-				row == t_dimensions[level].Height ? 0 : 1);
-
-			var z_size = new Size(Math.Min(TILE_DOWNSAMPLE, z_dimensions[level].Width  - TILE_DOWNSAMPLE * col) + z_overlap_tl.Width  + z_overlap_br.Width,
-				Math.Min(TILE_DOWNSAMPLE, z_dimensions[level].Height - TILE_DOWNSAMPLE * row) + z_overlap_tl.Height + z_overlap_br.Height);
-			if (z_size.Width < 0 || z_size.Height < 0)
-				throw new ArgumentException($"out of bounds level {level}, row {row}, col {col}");
-			var z_location = new Size(TILE_DOWNSAMPLE * col, TILE_DOWNSAMPLE * row);
-			var l_location = new SizeF((float)l_z_downsamples[level] * (z_location.Width  - z_overlap_tl.Width),
-				(float)l_z_downsamples[level] * (z_location.Height - z_overlap_tl.Height));
-			//Round location down and size up, and add offset of active area
-			var l0_location = new Size((long)(downsamples[os_level] * l_location.Width), 
-				(long)(downsamples[os_level] * l_location.Height));
-			var l_size = new Size((long)Math.Min(Math.Ceiling(l_z_downsamples[level] * z_size.Width ), dimensions[os_level].Width),
-				(long)Math.Min(Math.Ceiling(l_z_downsamples[level] * z_size.Height), dimensions[os_level].Height));
-			TraceMsg("calcs done " + level + "/" + col + "_" + row);
-			var bmp = ReadRegion(l0_location, os_level, l_size);
-			if (l_size.Width != z_size.Width || l_size.Height != z_size.Height)
-			{ //only resize when necessary
-				TraceMsg("resize " + level + "/" + col + "_" + row);
-				bmp = new Bitmap(bmp, (int)z_size.Width, (int)z_size.Height);
-			}
-			TraceMsg( "new bmp " + level + "/" + col + "_" + row);
-			var stream = new MemoryStream();
-			//Prints tile coords for testing
-			//var g = Graphics.FromImage(resizedbmp);
-			//g.DrawString(level + "/" + col + "_" + row, new Font(FontFamily.GenericSansSerif, 18), new SolidBrush(Color.Black), resizedbmp.Width / 2, resizedbmp.Height / 2);
-			bmp.Save(stream, System.Drawing.Imaging.ImageFormat.Jpeg);
-			TraceMsg( "end gettile " + level + "/" + col + "_" + row);
-			stream.Position = 0;
-			return stream;
-		}*/
-
 		public long Height => Dimensions[0].Height;
 
 		public long Width => Dimensions[0].Width;
-
-/*		private static string GetBytesReadable(long i)
-		{
-			// Get absolute value
-			long absolute_i = (i < 0 ? -i : i);
-			// Determine the suffix and readable value
-			string suffix;
-			double readable;
-			if (absolute_i >= 0x1000000000000000) // Exabyte
-			{
-				suffix = "EB";
-				readable = (i >> 50);
-			}
-			else if (absolute_i >= 0x4000000000000) // Petabyte
-			{
-				suffix = "PB";
-				readable = (i >> 40);
-			}
-			else if (absolute_i >= 0x10000000000) // Terabyte
-			{
-				suffix = "TB";
-				readable = (i >> 30);
-			}
-			else if (absolute_i >= 0x40000000) // Gigabyte
-			{
-				suffix = "GB";
-				readable = (i >> 20);
-			}
-			else if (absolute_i >= 0x100000) // Megabyte
-			{
-				suffix = "MB";
-				readable = (i >> 10);
-			}
-			else if (absolute_i >= 0x400) // Kilobyte
-			{
-				suffix = "KB";
-				readable = i;
-			}
-			else
-			{
-				return i.ToString("0 B"); // Byte
-			}
-			// Divide by 1024 to get fractional value
-			readable = (readable / 1024);
-			// Return formatted number with suffix
-			return readable.ToString("0.### ") + suffix;
-		}*/
 
 		/// <summary>
 		/// Returns the Bitmap that shows Exceprt with the defined parameters. Whereas Location defines the x and y coordinates of the 
@@ -442,17 +196,6 @@ namespace OpenSlideCs
 			}
 			return bmp;
 		}
-
-/*		public MemoryStream ReadThumbnail(int minsize)
-		{
-			for (int i = 0; i < z_dimensions.Count; i++)
-			{
-				var d = z_dimensions[i];
-				if (d.Width >= minsize || d.Height >= minsize)
-					return GetTile(i, 0, 0);
-			}
-			return null;
-		}*/
 
 		/// <summary>
 		/// Calculates the Microns (Mikrometer) per Pixel 
