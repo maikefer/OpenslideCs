@@ -46,8 +46,6 @@ namespace OpenSlideCs
 		[DllImport("libopenslide-0.dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
 		public static extern IntPtr openslide_get_property_value(int* osr, [MarshalAs(UnmanagedType.LPStr)] string name);
 
-		public static Action<string> OnTrace = Console.WriteLine;
-
 		private readonly int* _handle;
 
 		/// <summary>
